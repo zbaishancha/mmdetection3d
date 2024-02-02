@@ -645,7 +645,7 @@ class LoadPointsFromFile(BaseTransform):
         pts_file_path = results['lidar_points']['lidar_path']
         points = self._load_points(pts_file_path)
         points = points.reshape(-1, self.load_dim)
-        points = points[:, self.use_dim]
+        points = points[:, self.use_dim]  # 使用points的几个维度信息
         if self.norm_intensity:
             assert len(self.use_dim) >= 4, \
                 f'When using intensity norm, expect used dimensions >= 4, got {len(self.use_dim)}'  # noqa: E501
@@ -664,7 +664,7 @@ class LoadPointsFromFile(BaseTransform):
                  np.expand_dims(height, 1), points[:, 3:]], 1)
             attribute_dims = dict(height=3)
 
-        if self.use_color:
+        if self.use_color:  # 这应该是radar雷达point才有颜色信息
             assert len(self.use_dim) >= 6
             if attribute_dims is None:
                 attribute_dims = dict()

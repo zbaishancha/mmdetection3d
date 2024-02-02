@@ -378,11 +378,11 @@ class Det3DDataset(BaseDataset):
         input_dict['box_mode_3d'] = self.box_mode_3d
 
         # pre-pipline return None to random another in `__getitem__`
-        if not self.test_mode and self.filter_empty_gt:
+        if not self.test_mode and self.filter_empty_gt: # 一旦读取的当前帧数据没有gt boxes, 则返回none, 重读下一帧
             if len(input_dict['ann_info']['gt_labels_3d']) == 0:
                 return None
 
-        example = self.pipeline(input_dict)
+        example = self.pipeline(input_dict)  # self.pipeline是load data 以及处理数据的操作方法
 
         if not self.test_mode and self.filter_empty_gt:
             # after pipeline drop the example with empty annotations
