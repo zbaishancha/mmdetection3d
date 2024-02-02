@@ -130,9 +130,9 @@ class DETR3DHead(DETRHead):
                 Shape [nb_dec, bs, num_query, 10].
         """
         query_embeds = self.query_embedding.weight
-        hs, init_reference, inter_references = self.transformer(
+        hs, init_reference, inter_references = self.transformer(  # Detr3DTransformer: 6 x DetrTransformerDecoderLayer(MultiheadAttention+Detr3DCrossAtten+FFN)
             mlvl_feats,
-            query_embeds,
+            query_embeds,  # torch.Size([900, 512])
             reg_branches=self.reg_branches if self.with_box_refine else None,
             img_metas=img_metas,
             **kwargs)
@@ -173,7 +173,7 @@ class DETR3DHead(DETRHead):
         outputs_classes = torch.stack(outputs_classes)
         outputs_coords = torch.stack(outputs_coords)
         outs = {
-            'all_cls_scores': outputs_classes,
+            'all_cls_scores': outputs_classes, # torch.Size([6, 1 = Bs, 900, 10])
             'all_bbox_preds': outputs_coords,
             'enc_cls_scores': None,
             'enc_bbox_preds': None,

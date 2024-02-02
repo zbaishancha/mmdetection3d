@@ -125,10 +125,10 @@ class DETR3D(MVXTwoStageDetector):
             dict[str, Tensor]: A dictionary of loss components.
 
         """
-        batch_input_metas = [item.metainfo for item in batch_data_samples]
-        batch_input_metas = self.add_lidar2img(batch_input_metas)
-        img_feats = self.extract_feat(batch_inputs_dict, batch_input_metas)
-        outs = self.pts_bbox_head(img_feats, batch_input_metas, **kwargs)
+        batch_input_metas = [item.metainfo for item in batch_data_samples] # 取参数. 构造lidar2img矩阵
+        batch_input_metas = self.add_lidar2img(batch_input_metas)  
+        img_feats = self.extract_feat(batch_inputs_dict, batch_input_metas) # 提取img feat, 最后的FPN会输出4个尺度的img feat torch.Size([1, 6, 256, (116, 58, 29, 15), (200, 100, 50, 25])
+        outs = self.pts_bbox_head(img_feats, batch_input_metas, **kwargs) # all_cls_scores all_bbox_preds: torch.Size([6, 1, 900, 10])
 
         batch_gt_instances_3d = [
             item.gt_instances_3d for item in batch_data_samples

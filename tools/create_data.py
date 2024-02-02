@@ -12,7 +12,8 @@ from tools.dataset_converters import semantickitti_converter
 from tools.dataset_converters.create_gt_database import (
     GTDatabaseCreater, create_groundtruth_database)
 from tools.dataset_converters.update_infos_to_v2 import update_pkl_infos
-
+import sys
+sys.path.append('.')
 
 def kitti_data_prep(root_path,
                     info_prefix,

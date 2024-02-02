@@ -131,7 +131,7 @@ class BEVLoadMultiViewImageFromFiles(LoadMultiViewImageFromFiles):
         # Support multi-view images with different shapes
         # TODO: record the origin shape and padded shape
         filename, cam2img, lidar2cam, cam2lidar, lidar2img = [], [], [], [], []
-        for _, cam_item in results['images'].items():
+        for _, cam_item in results['images'].items():  # results就是单帧的data_info
             filename.append(cam_item['img_path'])
             lidar2cam.append(cam_item['lidar2cam'])
 
@@ -161,10 +161,10 @@ class BEVLoadMultiViewImageFromFiles(LoadMultiViewImageFromFiles):
 
         # img is of shape (h, w, c, num_views)
         # h and w can be different for different views
-        img_bytes = [
+        img_bytes = [   # load image
             get(name, backend_args=self.backend_args) for name in filename
         ]
-        imgs = [
+        imgs = [  # load image
             mmcv.imfrombytes(
                 img_byte,
                 flag=self.color_type,

@@ -106,12 +106,12 @@ class Detr3DTransformer(BaseModule):
         query_pos, query = torch.split(query_embed, self.embed_dims, dim=1)
         query_pos = query_pos.unsqueeze(0).expand(bs, -1, -1)  # [bs,num_q,c]
         query = query.unsqueeze(0).expand(bs, -1, -1)  # [bs,num_q,c]
-        reference_points = self.reference_points(query_pos)
+        reference_points = self.reference_points(query_pos) # [bs,num_q,c]-->[bs,num_q,3]
         reference_points = reference_points.sigmoid()
         init_reference_out = reference_points
 
         # decoder
-        query = query.permute(1, 0, 2)
+        query = query.permute(1, 0, 2)  # [bs, num_q, c]-->[num_q, bs, c]
         query_pos = query_pos.permute(1, 0, 2)
         inter_states, inter_references = self.decoder(
             query=query,
@@ -195,7 +195,7 @@ class Detr3DTransformerDecoder(TransformerLayerSequence):
                 intermediate.append(output)
                 intermediate_reference_points.append(reference_points)
 
-        if self.return_intermediate:
+        if self.return_intermediate:  # True, 每一层的更新的query结果和reference points结果
             return torch.stack(intermediate), torch.stack(
                 intermediate_reference_points)
 
@@ -326,22 +326,22 @@ class Detr3DCrossAtten(BaseModule):
         if query_pos is not None:
             query = query + query_pos
 
-        query = query.permute(1, 0, 2)
+        query = query.permute(1, 0, 2) # [num_q, bs, c]-->[bs, num_q, c]
 
         bs, num_query, _ = query.size()
 
         attention_weights = self.attention_weights(query).view(
-            bs, 1, num_query, self.num_cams, self.num_points, self.num_levels)
+            bs, 1, num_query, self.num_cams, self.num_points, self.num_levels) # torch.Size([1, 1, 900, 6, 1, 4]) 每个摄像头上仅采样一个点即reference point, 若没投到该相机上, 则无效
         reference_points_3d, output, mask = feature_sampling(
             value, reference_points, self.pc_range, kwargs['img_metas'])
         output = torch.nan_to_num(output)
         mask = torch.nan_to_num(mask)
         attention_weights = attention_weights.sigmoid() * mask
         output = output * attention_weights
-        output = output.sum(-1).sum(-1).sum(-1)
-        output = output.permute(2, 0, 1)
+        output = output.sum(-1).sum(-1).sum(-1)  # 对多尺度特征sum, 对多个摄像头求sum
+        output = output.permute(2, 0, 1)  # torch.Size([900, 1, 256])
         # (num_query, bs, embed_dims)
-        output = self.output_proj(output)
+        output = self.output_proj(output) 
         pos_feat = self.position_encoder(
             inverse_sigmoid(reference_points_3d)).permute(1, 0, 2)
         return self.dropout(output) + inp_residual + pos_feat
@@ -391,7 +391,7 @@ def feature_sampling(mlvl_feats,
         ref_pt[..., 2:3] * (pc_range[5] - pc_range[2]) + pc_range[2]  # z
 
     # (B num_q 3) -> (B num_q 4) -> (B 1 num_q 4) -> (B num_cam num_q 4 1)
-    ref_pt = torch.cat((ref_pt, torch.ones_like(ref_pt[..., :1])), -1)
+    ref_pt = torch.cat((ref_pt, torch.ones_like(ref_pt[..., :1])), -1) # torch.Size([1, 900, 4])
     ref_pt = ref_pt.view(B, 1, num_query, 4)
     ref_pt = ref_pt.repeat(1, num_cam, 1, 1).unsqueeze(-1)
     # (B num_cam 4 4) -> (B num_cam num_q 4 4)
@@ -440,7 +440,7 @@ def feature_sampling(mlvl_feats,
         sampled_feat = sampled_feat.permute(0, 2, 3, 1, 4)
         sampled_feats.append(sampled_feat)
 
-    sampled_feats = torch.stack(sampled_feats, -1)
+    sampled_feats = torch.stack(sampled_feats, -1) # torch.Size([1, 256, 900, 6, 1]) * 4 
     # (B C num_q num_cam fpn_lvl)
     sampled_feats = \
         sampled_feats.view(B, C, num_query, num_cam, 1, len(mlvl_feats))
